@@ -52,9 +52,14 @@ function gen_count(ops, suffix)
     body = Expr(:block)
     for (name, op_list) in ops
         fieldname = Symbol(name, suffix)
+        if name === :cmp
+            condition = :(op in $op_list && !ctx.metadata.ignore_cmp)
+        else
+            condition = :(op in $op_list)
+        end
         e = quote
-            if op in $op_list
-                ctx.metadata.$fieldname += 1
+            if $condition
+                ctx.metadata.counter.$fieldname += 1
                 return
             end
         end

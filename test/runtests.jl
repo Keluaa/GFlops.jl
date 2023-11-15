@@ -209,27 +209,27 @@ GFlops.times(::BenchmarkTools.Trial) = [2.0, 3.0]
         end
 
         @testset "comparisons" begin
-            let cnt = @show @count_ops 1.0 == 2.0
+            let cnt = @show @count_ops 1.0 == 2.0 ignore_cmp=false
                 @test cnt.cmp64 == 1
                 @test GFlops.flop(cnt) == 1
             end
 
-            let cnt = @show @count_ops 1.0f0 == 2.0f0
+            let cnt = @show @count_ops 1.0f0 == 2.0f0 ignore_cmp=false
                 @test cnt.cmp32 == 1
                 @test GFlops.flop(cnt) == 1
             end
 
-            let cnt = @show @count_ops 1.0 ≤ 2.0
+            let cnt = @show @count_ops 1.0 ≤ 2.0 ignore_cmp=false
                 @test cnt.cmp64 == 1
                 @test GFlops.flop(cnt) == 1
             end
 
-            let cnt = @show @count_ops 1.0 < 2.0
+            let cnt = @show @count_ops 1.0 < 2.0 ignore_cmp=false
                 @test cnt.cmp64 == 1
                 @test GFlops.flop(cnt) == 1
             end
 
-            let cnt = @show @count_ops 1.0 ≠ 2.0
+            let cnt = @show @count_ops 1.0 ≠ 2.0 ignore_cmp=false
                 @test cnt.cmp64 == 1
                 @test GFlops.flop(cnt) == 1
             end
@@ -279,7 +279,7 @@ GFlops.times(::BenchmarkTools.Trial) = [2.0, 3.0]
 
             let
                 fast_eq(x, y) = @fastmath x == y
-                cnt = @show @count_ops fast_eq(1.3, 4.3)
+                cnt = @show @count_ops fast_eq(1.3, 4.3) ignore_cmp=false
                 @test cnt.cmp64 == 1
                 @test GFlops.flop(cnt) == 1
             end
@@ -293,8 +293,9 @@ GFlops.times(::BenchmarkTools.Trial) = [2.0, 3.0]
 
             let
                 fast_sqrt(x) = @fastmath sqrt(x)
-                cnt = @show @count_ops fast_sqrt(1.3)
+                cnt = @show @count_ops fast_sqrt(1.3) ignore_cmp=false
                 @test cnt.sqrt64 == 1
+                @test cnt.cmp64 == 0  # no comparisons when fastmath is on
                 @test GFlops.flop(cnt) == 1
             end
         end
@@ -331,6 +332,12 @@ GFlops.times(::BenchmarkTools.Trial) = [2.0, 3.0]
                 @test GFlops.flop(cnt1) != 0
                 @test cnt2 == N*cnt1
             end
+        end
+
+        @testset "Wrong ignore_cmp" begin
+            @test_throws "Expected `ignore_cmp=truthy`" @eval @count_ops 1 wrong_arg
+            @test_throws "Expected `ignore_cmp=truthy`" @eval @count_ops 1 wrong_arg=1
+            @test_throws "TypeError: non-boolean"       @eval @count_ops 1 ignore_cmp=1
         end
     end
 

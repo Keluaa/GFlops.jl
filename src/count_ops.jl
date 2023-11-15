@@ -17,16 +17,28 @@ end
 
 
 
-function count_ops(funcall)
+function count_ops(funcall, ignore_cmp=nothing)
+    if ignore_cmp === nothing
+        cmp = true
+    elseif ignore_cmp isa Expr &&
+            ignore_cmp.head === :(=) &&
+            ignore_cmp.args[1] === :ignore_cmp
+        # Expect `:(ignore_cmp=expr)`, and extract `expr`
+        cmp = ignore_cmp.args[2]
+    else
+        error("Expected `ignore_cmp=truthy` as second argument, got: $ignore_cmp")
+    end
+
     v, e = prepare_call(funcall)
     quote
         let
-            ctx = CounterCtx(metadata=Counter())
+            meta = (; counter=Counter(), ignore_cmp=($cmp)::Bool)
+            ctx = CounterCtx(metadata=meta)
             $(v...)
             Cassette.overdub(ctx, ()->begin
                              $e
                              end)
-            ctx.metadata
+            ctx.metadata.counter
         end
     end
 end
@@ -35,12 +47,17 @@ macro count_ops(funcall)
     count_ops(funcall)
 end
 
+macro count_ops(funcall, ignore_cmp)
+    count_ops(funcall, ignore_cmp)
+end
+
 
 
 # Helper accessor (that can be overriden to fake benchmarking times in tests)
 times(t::BenchmarkTools.Trial) = t.times
 
-macro gflops(funcall)
+
+function gflops(funcall, ignore_cmp=nothing)
     benchmark = quote
         $BenchmarkTools.@benchmark $funcall
     end
@@ -50,7 +67,7 @@ macro gflops(funcall)
             b = $(esc(benchmark))
             ns = minimum(times(b))
 
-            cnt = flop($(count_ops(funcall)))
+            cnt = flop($(count_ops(funcall, ignore_cmp)))
             gflops = cnt / ns
             peakfraction = 1e9 * gflops / peakflops()
             memory = $BenchmarkTools.prettymemory(b.memory)
@@ -60,4 +77,13 @@ macro gflops(funcall)
             gflops
         end
     end
+end
+
+
+macro gflops(funcall)
+    gflops(funcall)
+end
+
+macro gflops(funcall, ignore_cmp)
+    gflops(funcall, ignore_cmp)
 end
