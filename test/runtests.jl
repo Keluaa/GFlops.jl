@@ -208,6 +208,97 @@ GFlops.times(::BenchmarkTools.Trial) = [2.0, 3.0]
             end
         end
 
+        @testset "comparisons" begin
+            let cnt = @show @count_ops 1.0 == 2.0
+                @test cnt.cmp64 == 1
+                @test GFlops.flop(cnt) == 1
+            end
+
+            let cnt = @show @count_ops 1.0f0 == 2.0f0
+                @test cnt.cmp32 == 1
+                @test GFlops.flop(cnt) == 1
+            end
+
+            let cnt = @show @count_ops 1.0 ≤ 2.0
+                @test cnt.cmp64 == 1
+                @test GFlops.flop(cnt) == 1
+            end
+
+            let cnt = @show @count_ops 1.0 < 2.0
+                @test cnt.cmp64 == 1
+                @test GFlops.flop(cnt) == 1
+            end
+
+            let cnt = @show @count_ops 1.0 ≠ 2.0
+                @test cnt.cmp64 == 1
+                @test GFlops.flop(cnt) == 1
+            end
+        end
+
+        @testset "sign" begin
+            let cnt = @show @count_ops copysign(-1.0, 2.0)
+                @test cnt.sign64 == 1
+                @test GFlops.flop(cnt) == 1
+            end
+
+            let cnt = @show @count_ops copysign(-1.0f0, 2.0f0)
+                @test cnt.sign32 == 1
+                @test GFlops.flop(cnt) == 1
+            end
+        end
+
+        @testset "rounding" begin
+            let cnt = @show @count_ops ceil(-1.1)
+                @test cnt.ceil64 == 1
+                @test GFlops.flop(cnt) == 1
+            end
+
+            let cnt = @show @count_ops floor(-1.1)
+                @test cnt.floor64 == 1
+                @test GFlops.flop(cnt) == 1
+            end
+
+            let cnt = @show @count_ops trunc(-1.1)
+                @test cnt.trunc64 == 1
+                @test GFlops.flop(cnt) == 1
+            end
+
+            let cnt = @show @count_ops round(-1.1)
+                @test cnt.round64 == 1
+                @test GFlops.flop(cnt) == 1
+            end
+        end
+
+        @testset "fastmath" begin
+            let
+                fast_add(x, y) = @fastmath x + y
+                cnt = @show @count_ops fast_add(1.3, 4.3)
+                @test cnt.add64 == 1
+                @test GFlops.flop(cnt) == 1
+            end
+
+            let
+                fast_eq(x, y) = @fastmath x == y
+                cnt = @show @count_ops fast_eq(1.3, 4.3)
+                @test cnt.cmp64 == 1
+                @test GFlops.flop(cnt) == 1
+            end
+
+            let
+                fast_neg(x) = @fastmath -x
+                cnt = @show @count_ops fast_neg(1.3)
+                @test cnt.neg64 == 1
+                @test GFlops.flop(cnt) == 1
+            end
+
+            let
+                fast_sqrt(x) = @fastmath sqrt(x)
+                cnt = @show @count_ops fast_sqrt(1.3)
+                @test cnt.sqrt64 == 1
+                @test GFlops.flop(cnt) == 1
+            end
+        end
+
         @testset "interpolated arguments" begin
             let N = 100
 
