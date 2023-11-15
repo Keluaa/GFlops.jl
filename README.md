@@ -123,3 +123,59 @@ Flop Counter: 0 flop
 ```
 
 This is a known issue; we'll try and find a way to circumvent the problem.
+
+### Extra comparisons without `@fastmath`
+
+Comparisons are only counted if `ignore_cmp=false`, as some operations have some
+extra checks (such as `sqrt`) when fast math is off:
+```julia
+julia> fast_sqrt(x) = @fastmath sqrt(x)
+fast_sqrt (generic function with 1 method)
+
+julia> @count_ops sqrt(1.3) ignore_cmp=false
+Flop Counter: 2 flop
+┌──────┬─────────┐
+│      │ Float64 │
+├──────┼─────────┤
+│  cmp │       1 │
+│ sqrt │       1 │
+└──────┴─────────┘
+
+julia> @count_ops fast_sqrt(1.3) ignore_cmp=false
+Flop Counter: 1 flop
+┌──────┬─────────┐
+│      │ Float64 │
+├──────┼─────────┤
+│ sqrt │       1 │
+└──────┴─────────┘
+
+julia> @count_ops sqrt(1.3) ignore_cmp=true  # `true` by default
+Flop Counter: 1 flop
+┌──────┬─────────┐
+│      │ Float64 │
+├──────┼─────────┤
+│ sqrt │       1 │
+└──────┴─────────┘
+```
+
+## Supported operations and weights
+
+| Op       | Weight | Example                        |
+|----------|--------|--------------------------------|
+| `fma`    | 2      | `a*b+c` or `fma(a,b,c)`        |
+| `muladd` | 2      | `a*b+c` or `muladd(a,b,c)`     |
+| `add`    | 1      | `a+b`                          |
+| `sub`    | 1      | `a-b`                          |
+| `mul`    | 1      | `a*b`                          |
+| `div`    | 1      | `a/b`                          |
+| `sign`   | 1      | `copysign(a, b)`               |
+| `cmp`    | 1      | `a < b`, `a == b`, `a >= b`... |
+| `abs`    | 1      | `abs(a)`                       |
+| `neg`    | 1      | `-a`                           |
+| `sqrt`   | 1      | `sqrt(a)`                      |
+| `ceil`   | 1      | `ceil(a)`                      |
+| `floor`  | 1      | `floor(a)`                     |
+| `trunc`  | 1      | `trunc(a)`                     |
+| `round`  | 1      | `round(a)`                     |
+
+All operations support `Float64`, `Float32` and `Float16`.
